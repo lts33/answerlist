@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interview Database</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         /* Custom styles if needed */
         .loader {
@@ -24,10 +25,33 @@
         <header class="mb-10 text-center">
             <h1 class="text-4xl font-bold text-indigo-600 mb-2">Interview Database</h1>
             <p class="text-gray-600">Store and search your interview questions and answers</p>
+            <div id="authSection" class="mt-4 flex flex-col items-center justify-center">
+                <div id="g_id_onload"
+                    data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                    data-callback="handleCredentialResponse"
+                    data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin"
+                    data-type="standard"
+                    data-size="large"
+                    data-theme="outline"
+                    data-text="sign_in_with"
+                    data-shape="rectangular"
+                    data-logo_alignment="left">
+                </div>
+                <div id="userInfo" class="hidden text-center">
+                    <p class="text-gray-700 mb-2">Welcome, <span id="displayUsername" class="font-bold"></span>!</p>
+                    <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white text-xs py-1 px-3 rounded transition">Logout</button>
+                    <div id="usernameUpdateArea" class="mt-2 hidden">
+                        <input type="text" id="newUsername" placeholder="Set Username" class="border rounded px-2 py-1 text-sm">
+                        <button id="updateUsernameBtn" class="bg-blue-500 text-white text-xs py-1 px-2 rounded">Set</button>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <!-- Record New Section -->
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <section id="recordSection" class="bg-white rounded-lg shadow-md p-6 mb-8 hidden">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Record New Question</h2>
             <form id="recordForm" class="space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -62,7 +86,7 @@
         </section>
 
         <!-- Search Section -->
-        <section class="bg-white rounded-lg shadow-md p-6">
+        <section id="searchSection" class="bg-white rounded-lg shadow-md p-6 hidden">
             <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Search Database</h2>
 
             <div class="relative mb-6">
@@ -83,6 +107,100 @@
 
     <script>
         const API_BASE = 'https://app.lt3.live';
+        let authToken = null;
+        let currentUser = null;
+
+        // --- Auth Logic ---
+        async function handleCredentialResponse(response) {
+            const id_token = response.credential;
+
+            try {
+                const res = await fetch(`${API_BASE}/login/google`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: id_token })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    authToken = data.access_token;
+                    currentUser = data.username;
+
+                    updateUIState(true);
+
+                    if (data.is_new_user || !currentUser) {
+                         document.getElementById('usernameUpdateArea').classList.remove('hidden');
+                         if(!currentUser) document.getElementById('displayUsername').innerText = "User";
+                    }
+
+                    if(currentUser) {
+                         document.getElementById('displayUsername').innerText = currentUser;
+                    }
+
+                } else {
+                    console.error("Login failed");
+                }
+            } catch (e) {
+                console.error("Login error", e);
+            }
+        }
+
+        function updateUIState(isLoggedIn) {
+            const loginBtn = document.querySelector('.g_id_signin');
+            const userInfo = document.getElementById('userInfo');
+            const recordSection = document.getElementById('recordSection');
+            const searchSection = document.getElementById('searchSection');
+
+            if (isLoggedIn) {
+                loginBtn.style.display = 'none';
+                userInfo.classList.remove('hidden');
+                recordSection.classList.remove('hidden');
+                searchSection.classList.remove('hidden');
+            } else {
+                loginBtn.style.display = 'block';
+                userInfo.classList.add('hidden');
+                recordSection.classList.add('hidden');
+                searchSection.classList.add('hidden');
+                authToken = null;
+                currentUser = null;
+                document.getElementById('resultsArea').innerHTML = '<p class="text-center text-gray-500 py-4">Start typing to search...</p>';
+            }
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+             updateUIState(false);
+             google.accounts.id.disableAutoSelect();
+        });
+
+        document.getElementById('updateUsernameBtn').addEventListener('click', async () => {
+             const newUsername = document.getElementById('newUsername').value;
+             if(!newUsername) return;
+
+             try {
+                 const res = await fetch(`${API_BASE}/user/username`, {
+                     method: 'PUT',
+                     headers: {
+                         'Authorization': `Bearer ${authToken}`,
+                         'Content-Type': 'application/json'
+                     },
+                     body: JSON.stringify({ username: newUsername })
+                 });
+
+                 if(res.ok) {
+                     const data = await res.json();
+                     currentUser = data.username;
+                     document.getElementById('displayUsername').innerText = currentUser;
+                     document.getElementById('usernameUpdateArea').classList.add('hidden');
+                 } else {
+                     alert("Failed to update username. It might be taken.");
+                 }
+             } catch(e) {
+                 console.error(e);
+             }
+        });
+
 
         // --- Record New Logic ---
         const recordForm = document.getElementById('recordForm');
@@ -90,6 +208,11 @@
 
         recordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            if (!authToken) {
+                showStatus('error', 'You must be logged in.');
+                return;
+            }
 
             const submitBtn = recordForm.querySelector('button[type="submit"]');
             const originalBtnText = submitBtn.innerText;
@@ -112,7 +235,10 @@
 
             try {
                 const response = await fetch(`${API_BASE}/add?${params.toString()}`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
                 });
 
                 if (response.ok) {
@@ -165,10 +291,19 @@
         });
 
         async function performSearch(query) {
+            if (!authToken) {
+                resultsArea.innerHTML = '<p class="text-center text-red-500">Please login to search.</p>';
+                return;
+            }
+
             resultsArea.innerHTML = '<div class="flex justify-center py-4"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8"></div></div>';
 
             try {
-                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`, {
+                     headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
                 if (response.ok) {
                     const data = await response.json();
                     renderResults(data);
