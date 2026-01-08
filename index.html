@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interview Database</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         /* Custom styles if needed */
         .loader {
@@ -21,68 +22,261 @@
 <body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
 
     <div class="container mx-auto px-4 py-8 max-w-4xl">
-        <header class="mb-10 text-center">
+        <header class="mb-10 text-center flex flex-col items-center">
             <h1 class="text-4xl font-bold text-indigo-600 mb-2">Interview Database</h1>
             <p class="text-gray-600">Store and search your interview questions and answers</p>
+            <div id="userInfo" class="mt-4 hidden text-sm text-gray-500">
+                Logged in as: <span id="usernameDisplay" class="font-bold text-gray-700"></span>
+                <button id="logoutBtn" class="ml-2 text-red-500 hover:text-red-700 underline">Logout</button>
+            </div>
         </header>
 
-        <!-- Record New Section -->
-        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Record New Question</h2>
-            <form id="recordForm" class="space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="md:col-span-2">
-                        <label for="question" class="block text-sm font-medium text-gray-700 mb-1">Question</label>
-                        <input type="text" id="question" name="question" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="e.g. What is polymorphism?">
+        <!-- Login Section -->
+        <section id="loginSection" class="bg-white rounded-lg shadow-md p-10 mb-8 text-center max-w-md mx-auto">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-700">Sign In</h2>
+            <p class="text-gray-500 mb-6">Please sign in with Google to access your database.</p>
+            <div id="googleBtn" class="flex justify-center"></div>
+            <div id="loginError" class="mt-4 text-red-500 text-sm hidden"></div>
+        </section>
+
+        <!-- Main App Content (Hidden until login) -->
+        <div id="appContent" class="hidden">
+            <!-- Record New Section -->
+            <section class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Record New Question</h2>
+                <form id="recordForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2">
+                            <label for="question" class="block text-sm font-medium text-gray-700 mb-1">Question</label>
+                            <input type="text" id="question" name="question" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="e.g. What is polymorphism?">
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="answer" class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
+                            <textarea id="answer" name="answer" required rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="The answer..."></textarea>
+                        </div>
+
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <input type="text" id="category" name="category" value="General" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                        </div>
+
+                        <div>
+                            <label for="info_b" class="block text-sm font-medium text-gray-700 mb-1">Info B</label>
+                            <input type="text" id="info_b" name="info_b" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Additional info">
+                        </div>
                     </div>
 
-                    <div class="md:col-span-2">
-                        <label for="answer" class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
-                        <textarea id="answer" name="answer" required rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="The answer..."></textarea>
+                    <div class="flex items-center justify-end pt-2">
+                        <div id="formStatus" class="mr-4 text-sm font-medium hidden"></div>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-md transition duration-200 shadow-md">
+                            Save Record
+                        </button>
                     </div>
+                </form>
+            </section>
 
-                    <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                        <input type="text" id="category" name="category" value="General" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
-                    </div>
+            <!-- Search Section -->
+            <section class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Search Database</h2>
 
-                    <div>
-                        <label for="info_b" class="block text-sm font-medium text-gray-700 mb-1">Info B</label>
-                        <input type="text" id="info_b" name="info_b" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Additional info">
+                <div class="relative mb-6">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
+                    <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-lg" placeholder="Search by question or answer...">
                 </div>
 
-                <div class="flex items-center justify-end pt-2">
-                    <div id="formStatus" class="mr-4 text-sm font-medium hidden"></div>
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-md transition duration-200 shadow-md">
-                        Save Record
+                <!-- Results -->
+                <div id="resultsArea" class="space-y-4">
+                    <p class="text-center text-gray-500 py-4">Start typing to search...</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Username Modal -->
+    <div id="usernameModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Welcome! Set your Username</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500 mb-4">
+                        Please choose a username for your account.
+                    </p>
+                    <input type="text" id="newUsername" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Username">
+                    <p id="usernameError" class="text-red-500 text-xs mt-1 hidden"></p>
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="saveUsernameBtn" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                        Save
                     </button>
                 </div>
-            </form>
-        </section>
-
-        <!-- Search Section -->
-        <section class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Search Database</h2>
-
-            <div class="relative mb-6">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </div>
-                <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-lg" placeholder="Search by question or answer...">
             </div>
-
-            <!-- Results -->
-            <div id="resultsArea" class="space-y-4">
-                <p class="text-center text-gray-500 py-4">Start typing to search...</p>
-            </div>
-        </section>
+        </div>
     </div>
 
     <script>
         const API_BASE = 'https://app.lt3.live';
+        let authToken = localStorage.getItem('authToken');
+        let googleClientId = null;
+
+        const loginSection = document.getElementById('loginSection');
+        const appContent = document.getElementById('appContent');
+        const userInfo = document.getElementById('userInfo');
+        const usernameDisplay = document.getElementById('usernameDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const usernameModal = document.getElementById('usernameModal');
+        const loginError = document.getElementById('loginError');
+
+        // --- Init ---
+        async function init() {
+            try {
+                const res = await fetch(`${API_BASE}/auth/config`);
+                if (res.ok) {
+                    const data = await res.json();
+                    googleClientId = data.google_client_id;
+                    initializeGoogleSignIn();
+                } else {
+                    console.error("Failed to load auth config");
+                    loginError.textContent = "Failed to load configuration. Please try again later.";
+                    loginError.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("Error loading config", e);
+                loginError.textContent = "Network error loading configuration.";
+                loginError.classList.remove('hidden');
+            }
+
+            if (authToken) {
+                // Ideally verify token validity here or handle 401 later
+                // For now, assume valid and show app
+                // We might want to store username in localStorage too
+                const storedUsername = localStorage.getItem('username') || 'User';
+                showApp(storedUsername);
+            } else {
+                showLogin();
+            }
+        }
+
+        function initializeGoogleSignIn() {
+            if (!googleClientId) return;
+
+            google.accounts.id.initialize({
+                client_id: googleClientId,
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("googleBtn"),
+                { theme: "outline", size: "large" }  // customization attributes
+            );
+        }
+
+        async function handleCredentialResponse(response) {
+            loginError.classList.add('hidden');
+            try {
+                const res = await fetch(`${API_BASE}/login/google`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    authToken = data.access_token;
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('username', data.username);
+
+                    showApp(data.username);
+
+                    if (data.is_new) {
+                        openUsernameModal();
+                    }
+                } else {
+                    const err = await res.json();
+                    loginError.textContent = err.detail || 'Login failed';
+                    loginError.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("Login error", e);
+                loginError.textContent = 'Network error during login';
+                loginError.classList.remove('hidden');
+            }
+        }
+
+        function showLogin() {
+            loginSection.classList.remove('hidden');
+            appContent.classList.add('hidden');
+            userInfo.classList.add('hidden');
+        }
+
+        function showApp(username) {
+            loginSection.classList.add('hidden');
+            appContent.classList.remove('hidden');
+            userInfo.classList.remove('hidden');
+            usernameDisplay.textContent = username;
+        }
+
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
+            showLogin();
+            // Re-render button if needed? It should still be there.
+        }
+
+        logoutBtn.addEventListener('click', logout);
+
+        // --- Username Modal Logic ---
+        const newUsernameInput = document.getElementById('newUsername');
+        const saveUsernameBtn = document.getElementById('saveUsernameBtn');
+        const usernameError = document.getElementById('usernameError');
+
+        function openUsernameModal() {
+            usernameModal.classList.remove('hidden');
+            newUsernameInput.value = localStorage.getItem('username') || '';
+        }
+
+        saveUsernameBtn.addEventListener('click', async () => {
+            const newUsername = newUsernameInput.value.trim();
+            if (!newUsername) return;
+
+            usernameError.classList.add('hidden');
+            saveUsernameBtn.disabled = true;
+            saveUsernameBtn.innerText = 'Saving...';
+
+            try {
+                const res = await fetch(`${API_BASE}/user/username`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ username: newUsername })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('username', data.username);
+                    usernameDisplay.textContent = data.username;
+                    usernameModal.classList.add('hidden');
+                } else {
+                    const err = await res.json();
+                    usernameError.textContent = err.detail || 'Failed to update username';
+                    usernameError.classList.remove('hidden');
+                }
+            } catch (e) {
+                usernameError.textContent = 'Network error';
+                usernameError.classList.remove('hidden');
+            } finally {
+                saveUsernameBtn.disabled = false;
+                saveUsernameBtn.innerText = 'Save';
+            }
+        });
 
         // --- Record New Logic ---
         const recordForm = document.getElementById('recordForm');
@@ -90,6 +284,10 @@
 
         recordForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!authToken) {
+                showStatus('error', 'You must be logged in.');
+                return;
+            }
 
             const submitBtn = recordForm.querySelector('button[type="submit"]');
             const originalBtnText = submitBtn.innerText;
@@ -102,17 +300,23 @@
             const category = document.getElementById('category').value;
             const info_b = document.getElementById('info_b').value;
 
-            // Construct URL with query parameters for FastAPI
-            const params = new URLSearchParams({
-                question: question,
-                answer: answer,
-                category: category || 'General',
-            });
-            if (info_b) params.append('info_b', info_b);
+            // Updated to use JSON body as per main.py UserCreate/InterviewEntry models
+            // Wait, previous frontend used query params. Main.py provided uses Pydantic model in body.
+            // I'll use JSON body which is standard for FastAPI Pydantic models.
 
             try {
-                const response = await fetch(`${API_BASE}/add?${params.toString()}`, {
-                    method: 'POST'
+                const response = await fetch(`${API_BASE}/add`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        answer: answer,
+                        category: category || 'General',
+                        info_b: info_b
+                    })
                 });
 
                 if (response.ok) {
@@ -120,6 +324,10 @@
                     showStatus('success', 'Record saved successfully!');
                     recordForm.reset();
                 } else {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
                     console.error('Submission failed', response);
                     showStatus('error', 'Failed to save record.');
                 }
@@ -165,14 +373,28 @@
         });
 
         async function performSearch(query) {
+            if (!authToken) {
+                resultsArea.innerHTML = '<p class="text-center text-red-500">Please log in.</p>';
+                return;
+            }
+
             resultsArea.innerHTML = '<div class="flex justify-center py-4"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8"></div></div>';
 
             try {
-                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`, {
+                     headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
                 if (response.ok) {
                     const data = await response.json();
                     renderResults(data);
                 } else {
+                    if (response.status === 401) {
+                        logout();
+                        return;
+                    }
                     resultsArea.innerHTML = '<p class="text-center text-red-500">Error fetching results.</p>';
                 }
             } catch (error) {
@@ -225,6 +447,9 @@
                 .replace(/"/g, "&quot;")
                 .replace(/'/g, "&#039;");
         }
+
+        // Start
+        init();
     </script>
 </body>
 </html>
