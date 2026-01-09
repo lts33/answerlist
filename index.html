@@ -8,6 +8,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      window.onerror = function (message, source, lineno, colno, error) {
+        var errorContainer = document.createElement('div');
+        errorContainer.style.padding = '20px';
+        errorContainer.style.background = '#ffebee';
+        errorContainer.style.color = '#b71c1c';
+        errorContainer.style.position = 'fixed';
+        errorContainer.style.top = '0';
+        errorContainer.style.left = '0';
+        errorContainer.style.width = '100%';
+        errorContainer.style.zIndex = '9999';
+        errorContainer.innerHTML = '<h3>Global Error Caught</h3><p>' + message + '</p><p>' + source + ':' + lineno + ':' + colno + '</p>';
+        document.body.appendChild(errorContainer);
+        console.error('Global error:', message, source, lineno, colno, error);
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
