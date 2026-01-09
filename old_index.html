@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Database</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles if needed */
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
+
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-bold text-indigo-600 mb-2">Interview Database</h1>
+            <p class="text-gray-600">Store and search your interview questions and answers</p>
+        </header>
+
+        <!-- Record New Section -->
+        <section class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Record New Question</h2>
+            <form id="recordForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="md:col-span-2">
+                        <label for="question" class="block text-sm font-medium text-gray-700 mb-1">Question</label>
+                        <input type="text" id="question" name="question" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="e.g. What is polymorphism?">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="answer" class="block text-sm font-medium text-gray-700 mb-1">Answer</label>
+                        <textarea id="answer" name="answer" required rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="The answer..."></textarea>
+                    </div>
+
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                        <input type="text" id="category" name="category" value="General" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="info_b" class="block text-sm font-medium text-gray-700 mb-1">Info B</label>
+                        <input type="text" id="info_b" name="info_b" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Additional info">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end pt-2">
+                    <div id="formStatus" class="mr-4 text-sm font-medium hidden"></div>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-md transition duration-200 shadow-md">
+                        Save Record
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Search Section -->
+        <section class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4 text-gray-700 border-b pb-2">Search Database</h2>
+
+            <div class="relative mb-6">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text" id="searchInput" class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-lg" placeholder="Search by question or answer...">
+            </div>
+
+            <!-- Results -->
+            <div id="resultsArea" class="space-y-4">
+                <p class="text-center text-gray-500 py-4">Start typing to search...</p>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE = 'https://app.lt3.live';
+
+        // --- Record New Logic ---
+        const recordForm = document.getElementById('recordForm');
+        const formStatus = document.getElementById('formStatus');
+
+        recordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = recordForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Saving...';
+            formStatus.classList.add('hidden');
+
+            const question = document.getElementById('question').value;
+            const answer = document.getElementById('answer').value;
+            const category = document.getElementById('category').value;
+            const info_b = document.getElementById('info_b').value;
+
+            // Construct URL with query parameters for FastAPI
+            const params = new URLSearchParams({
+                question: question,
+                answer: answer,
+                category: category || 'General',
+            });
+            if (info_b) params.append('info_b', info_b);
+
+            try {
+                const response = await fetch(`${API_BASE}/add?${params.toString()}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showStatus('success', 'Record saved successfully!');
+                    recordForm.reset();
+                } else {
+                    console.error('Submission failed', response);
+                    showStatus('error', 'Failed to save record.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('error', 'Network error occurred.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalBtnText;
+            }
+        });
+
+        function showStatus(type, message) {
+            formStatus.textContent = message;
+            formStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            formStatus.classList.add(type === 'success' ? 'text-green-600' : 'text-red-600');
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    formStatus.classList.add('hidden');
+                }, 3000);
+            }
+        }
+
+        // --- Search Logic ---
+        const searchInput = document.getElementById('searchInput');
+        const resultsArea = document.getElementById('resultsArea');
+        let debounceTimer;
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+
+            clearTimeout(debounceTimer);
+
+            if (query.length === 0) {
+                resultsArea.innerHTML = '<p class="text-center text-gray-500 py-4">Start typing to search...</p>';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                performSearch(query);
+            }, 300); // 300ms debounce
+        });
+
+        async function performSearch(query) {
+            resultsArea.innerHTML = '<div class="flex justify-center py-4"><div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-8 w-8"></div></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderResults(data);
+                } else {
+                    resultsArea.innerHTML = '<p class="text-center text-red-500">Error fetching results.</p>';
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsArea.innerHTML = '<p class="text-center text-red-500">Network error.</p>';
+            }
+        }
+
+        function renderResults(results) {
+            if (!results || results.length === 0) {
+                resultsArea.innerHTML = '<p class="text-center text-gray-500">No results found.</p>';
+                return;
+            }
+
+            resultsArea.innerHTML = '';
+
+            results.forEach(item => {
+                // item structure: { id, question, metadata: { answer, category, info_b } }
+                const { question, metadata } = item;
+                const answer = metadata?.answer || 'No answer provided';
+                const category = metadata?.category || 'Uncategorized';
+                const info_b = metadata?.info_b;
+
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 border-l-4 border-indigo-500 rounded-r-md p-4 hover:shadow-md transition';
+
+                let infoBHtml = '';
+                if (info_b) {
+                    infoBHtml = `<div class="mt-2 text-xs text-gray-400 border-t pt-1">Info B: ${escapeHtml(info_b)}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-bold text-gray-800">${escapeHtml(question)}</h3>
+                        <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full whitespace-nowrap ml-2">${escapeHtml(category)}</span>
+                    </div>
+                    <p class="text-gray-600 whitespace-pre-wrap">${escapeHtml(answer)}</p>
+                    ${infoBHtml}
+                `;
+                resultsArea.appendChild(card);
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
