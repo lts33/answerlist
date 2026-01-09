@@ -13,7 +13,13 @@ function App() {
     const token = localStorage.getItem('access_token');
     const storedUser = localStorage.getItem('user_data');
     if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user data from local storage", e);
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_data');
+      }
     }
   }, []);
 
