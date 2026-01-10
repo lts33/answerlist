@@ -47,11 +47,6 @@ function Login({ setDisplayName, displayName, setUser }) {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
     const handleSuccess = async (credentialResponse) => {
-        if (!displayName.trim()) {
-            setError('Please enter a display name first.');
-            return;
-        }
-
         setIsLoggingIn(true);
         setError('');
 
@@ -78,7 +73,11 @@ function Login({ setDisplayName, displayName, setUser }) {
 
         } catch (err) {
             console.error(err);
-            setError('Authentication failed with backend.');
+            if (!displayName.trim()) {
+                setError('Login failed. New users may need a display name.');
+            } else {
+                setError('Authentication failed with backend.');
+            }
         } finally {
             setIsLoggingIn(false);
         }
