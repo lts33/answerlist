@@ -58,6 +58,21 @@ npm run build
 
 The output files will be generated in the `dist/` directory, ready for deployment.
 
+## Deployment to GitHub Pages
+
+This project is configured to deploy to GitHub Pages.
+
+1. **Configuration**: The `vite.config.js` file is set with `base: '/answerlist/'`. Ensure this matches your GitHub repository name.
+2. **Deploy**: Run the following command to build and deploy the application:
+
+   ```bash
+   npm run gh-pages
+   ```
+
+   This script will:
+   - Build the project (outputting to `dist/`).
+   - Push the contents of `dist/` to the `gh-pages` branch of your repository.
+
 ## Project Structure
 
 ```
