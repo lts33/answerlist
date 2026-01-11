@@ -1,16 +1,86 @@
-# React + Vite
+# Knowledge Base Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, responsive React application designed to manage and query a Question & Answer knowledge base. This dashboard provides a secure interface for users to search for existing information and contribute new Q&A pairs to the system.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Secure Authentication**: Integrated with Google OAuth for secure and easy login.
+- **User Registration**: Seamless onboarding flow for new users to set their display profile.
+- **Smart Search**: Real-time search functionality to quickly find relevant questions and answers.
+- **Content Management**: Intuitive interface for adding new questions and answers to the database.
+- **Responsive Design**: Built with Tailwind CSS to ensure a great experience on both desktop and mobile devices.
 
-## React Compiler
+## Technology Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend Framework**: [React 19](https://react.dev/)
+- **Build Tool**: [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **HTTP Client**: [Axios](https://axios-http.com/)
+- **Authentication**: [@react-oauth/google](https://github.com/MomenSherif/react-oauth)
 
-## Expanding the ESLint configuration
+## Prerequisites
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Before running the application, ensure you have the following installed:
+
+- **Node.js** (v18.0.0 or higher recommended)
+- **npm** (comes with Node.js) or **yarn**
+
+## Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository_url>
+   cd <project_directory>
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+## Development
+
+To start the local development server:
+
+```bash
+npm run dev
+```
+
+The application will launch in your default browser at `http://localhost:5173` (port may vary).
+
+## Building for Production
+
+To create an optimized production build:
+
+```bash
+npm run build
+```
+
+The output files will be generated in the `dist/` directory, ready for deployment.
+
+## Project Structure
+
+```
+src/
+├── assets/          # Static images and assets
+├── App.jsx          # Main application logic (Auth, Dashboard, Search, Add)
+├── ErrorBoundary.jsx # Global error handling component
+├── main.jsx         # Application entry point
+├── index.css        # Global styles and Tailwind imports
+└── ...
+```
+
+## Configuration
+
+The application communicates with a backend API. The API base URL is currently set to:
+`https://app.lt3.live`
+
+To change this, update the `API_BASE` constant in `src/App.jsx`.
+
+## Linting
+
+To run the linter and check for code issues:
+
+```bash
+npm run lint
+```
