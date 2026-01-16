@@ -52,35 +52,35 @@ function Login({ setUser }) {
         setError('');
 
         try {
-            // Step 3: Frontend sends POST /auth/google with body: { "token": "..." } (No name yet).
             const payload = {
                 token: credentialResponse.credential
             };
 
+            console.log('Sending Google auth request...');
             const res = await axios.post(`${API_BASE}/auth/google`, payload);
+            console.log('Google auth response:', res.data);
 
             // Handle the API Response
-            if (res.data.status === 'register_required') {
-                // Case B: Registration Required (Status 202)
+            if (res.data && res.data.status === 'register_required') {
+                // Case B: Registration Required
                 setGoogleToken(credentialResponse.credential);
                 setIsRegistering(true);
                 setIsLoggingIn(false);
-            } else if (res.data.status === 'login_success') {
-                // Case A: Success (Status 200)
+            } else if (res.data && res.data.status === 'login_success') {
+                // Case A: Success
                 handleLoginSuccess(res.data);
             } else {
+                console.warn('Unexpected response:', res);
                 setError('Unexpected response from server.');
                 setIsLoggingIn(false);
             }
 
         } catch (err) {
-            console.error(err);
+            console.error('Login error:', err);
             if (err.response && err.response.status === 202) {
-                 // In case axios is configured to throw on 202 or if the server returns it in a way that axios catches?
-                 // Standard axios does not throw on 202. But checking just in case user meant 202 is treated differently.
-                 // Actually, if the backend sends 202, axios resolves.
-                 // However, I'll trust my logic above.
-                 // If the backend returns error status (4xx, 5xx), it lands here.
+                 // Fallback if backend returns 202 but axios throws (unlikely)
+                 // Or if logic requires it.
+                 // Assuming 202 might be caught here if configured.
                  setError('Authentication failed with backend.');
             } else {
                  setError('Authentication failed.');
@@ -97,7 +97,6 @@ function Login({ setUser }) {
 
         setIsLoggingIn(true);
         try {
-            // Step 3 (Registration): Frontend sends POST /auth/google again with: { "token": "...", "name": "User Typed Name" }
             const payload = {
                 token: googleToken,
                 name: displayName
@@ -105,7 +104,7 @@ function Login({ setUser }) {
 
             const res = await axios.post(`${API_BASE}/auth/google`, payload);
 
-            if (res.data.status === 'login_success') {
+            if (res.data && res.data.status === 'login_success') {
                 handleLoginSuccess(res.data);
             } else {
                  setError('Registration failed.');
@@ -119,13 +118,16 @@ function Login({ setUser }) {
     };
 
     const handleLoginSuccess = (data) => {
+        // Validation: Ensure data.username is a string, or fallback
+        let safeUsername = data.username;
+        if (typeof safeUsername !== 'string') {
+            console.warn('Username is not a string, using default.');
+            safeUsername = 'User';
+        }
+
         localStorage.setItem('access_token', data.access_token);
-        // Construct a user object to store
-        // Backend returns: { "status": "login_success", "access_token": "...", "username": "Stored Name" }
         const userData = {
-            name: data.username,
-            // id: data.user_id, // prompt didn't mention user_id in new response, but keeping consistent with usage might be needed.
-            // If the dashboard doesn't need ID, it's fine. Dashboard uses user.name and user.token.
+            name: safeUsername,
             token: data.access_token
         };
         localStorage.setItem('user_data', JSON.stringify(userData));
@@ -208,7 +210,7 @@ function Dashboard({ user, logout }) {
                 const res = await axios.get(`${API_BASE}/search?q=${encodeURIComponent(query)}`, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 });
-                setResults(res.data);
+                setResults(Array.isArray(res.data) ? res.data : []);
             } catch (err) {
                 console.error(err);
                 alert('Search failed');
@@ -232,7 +234,6 @@ function Dashboard({ user, logout }) {
             setAddMessage('Item added successfully!');
             setQuestion('');
             setAnswer('');
-            // Clear message after 3 seconds
             setTimeout(() => setAddMessage(''), 3000);
         } catch (err) {
             console.error(err);
@@ -242,12 +243,15 @@ function Dashboard({ user, logout }) {
         }
     };
 
+    // Robust display name
+    const displayName = typeof user.name === 'string' ? user.name : 'User';
+
     return (
         <div className="container mx-auto px-4 py-8 max-w-5xl">
             <header className="flex justify-between items-center mb-10 border-b pb-4">
                 <div>
                     <h1 className="text-2xl font-bold text-indigo-700">Dashboard</h1>
-                    <p className="text-gray-600">Welcome, <span className="font-semibold">{user.name}</span></p>
+                    <p className="text-gray-600">Welcome, <span className="font-semibold">{displayName}</span></p>
                 </div>
                 <button
                     onClick={logout}
@@ -276,7 +280,7 @@ function Dashboard({ user, logout }) {
                     <div className="space-y-4">
                         {results.map((item, idx) => (
                             <div key={item.id || idx} className="bg-white rounded-lg shadow p-6 border-l-4 border-indigo-500">
-                                <h3 className="text-lg font-bold text-gray-800 mb-2">{item.question}</h3>
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">{item.question || 'No question'}</h3>
                                 <p className="text-gray-600 whitespace-pre-wrap">{item.metadata?.answer || 'No answer'}</p>
                             </div>
                         ))}
