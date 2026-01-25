@@ -29,7 +29,7 @@ export default function Login({ setUser }) {
                 setGoogleToken(credentialResponse.credential);
                 setIsRegistering(true);
                 setIsLoggingIn(false);
-            } else if (res.data && res.data.status === 'login_success') {
+            } else if (res.data && (res.data.status === 'login_success' || res.data.access_token)) {
                 handleLoginSuccess(res.data);
             } else {
                 console.warn('Unexpected response:', res);
@@ -39,8 +39,8 @@ export default function Login({ setUser }) {
 
         } catch (err) {
             console.error('Login error:', err);
-            if (err.response && err.response.status === 202) {
-                 setError('Authentication failed with backend.');
+            if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+                 setError('Authentication failed: Invalid credentials.');
             } else {
                  setError('Authentication failed.');
             }
