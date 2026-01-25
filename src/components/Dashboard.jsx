@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { Search, Plus, LogOut, User, MessageSquare, Send } from 'lucide-react';
 
@@ -14,7 +14,7 @@ export default function Dashboard({ user, logout }) {
     const [adding, setAdding] = useState(false);
     const [addMessage, setAddMessage] = useState('');
 
-    const handleSearch = async (e) => {
+    const handleSearch = useCallback(async (e) => {
         if (e.key === 'Enter') {
             if (!query.trim()) return;
             setLoadingSearch(true);
@@ -30,9 +30,9 @@ export default function Dashboard({ user, logout }) {
                 setLoadingSearch(false);
             }
         }
-    };
+    }, [query, user.token]);
 
-    const handleAdd = async (e) => {
+    const handleAdd = useCallback(async (e) => {
         e.preventDefault();
         setAdding(true);
         setAddMessage('');
@@ -53,7 +53,7 @@ export default function Dashboard({ user, logout }) {
         } finally {
             setAdding(false);
         }
-    };
+    }, [question, answer, user.token]);
 
     // Robust display name
     const displayName = typeof user.name === 'string' ? user.name : 'User';
