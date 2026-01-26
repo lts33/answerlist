@@ -12,6 +12,13 @@ vi.mock('axios', () => ({
     },
 }));
 
+// Mock IntersectionObserver
+window.IntersectionObserver = vi.fn().mockImplementation(function() {
+    this.observe = vi.fn();
+    this.unobserve = vi.fn();
+    this.disconnect = vi.fn();
+});
+
 // Helper to access internal React props (fiber)
 function getReactProps(element) {
     const key = Object.keys(element).find(key => key.startsWith('__reactProps$'));
