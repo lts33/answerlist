@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Search, Plus, LogOut, User, MessageSquare, Send } from 'lucide-react';
 
@@ -13,6 +13,12 @@ export default function Dashboard({ user, logout }) {
     const [answer, setAnswer] = useState('');
     const [adding, setAdding] = useState(false);
     const [addMessage, setAddMessage] = useState('');
+
+    // All Items State
+    const [allItems, setAllItems] = useState([]);
+    const [visibleItems, setVisibleItems] = useState([]);
+    const [loadingAll, setLoadingAll] = useState(false);
+    const observerRef = useRef(null);
 
     const handleSearch = useCallback(async (e) => {
         if (e.key === 'Enter') {
@@ -46,6 +52,8 @@ export default function Dashboard({ user, logout }) {
             setAddMessage('Item added successfully!');
             setQuestion('');
             setAnswer('');
+            // Refresh all items after adding
+            fetchAllItems();
             setTimeout(() => setAddMessage(''), 3000);
         } catch (err) {
             console.error(err);
@@ -54,6 +62,46 @@ export default function Dashboard({ user, logout }) {
             setAdding(false);
         }
     }, [question, answer, user.token]);
+
+    const fetchAllItems = useCallback(async () => {
+        setLoadingAll(true);
+        try {
+            const res = await axios.get(`${API_BASE}/all`, {
+                headers: { Authorization: `Bearer ${user.token}` }
+            });
+            const data = Array.isArray(res.data) ? res.data : [];
+            setAllItems(data);
+            setVisibleItems(data.slice(0, 10));
+        } catch (err) {
+            console.error("Failed to fetch all items", err);
+        } finally {
+            setLoadingAll(false);
+        }
+    }, [user.token]);
+
+    useEffect(() => {
+        fetchAllItems();
+    }, [fetchAllItems]);
+
+    // Infinite Scroll Observer
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                setVisibleItems((prev) => {
+                    if (prev.length < allItems.length) {
+                        return allItems.slice(0, prev.length + 10);
+                    }
+                    return prev;
+                });
+            }
+        }, { threshold: 1.0 });
+
+        if (observerRef.current) {
+            observer.observe(observerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [allItems]); // Re-create if allItems changes, relying on setVisibleItems func update for prev
 
     // Robust display name
     const displayName = typeof user.name === 'string' ? user.name : 'User';
@@ -111,44 +159,80 @@ export default function Dashboard({ user, logout }) {
                             </div>
                         </div>
 
-                        {/* Results */}
+                        {/* Results or All Items */}
                         <div className="space-y-4">
-                            {results.length > 0 ? (
-                                results.map((item, idx) => (
-                                    <div key={item.id || idx} className="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition-all duration-200">
-                                        <div className="p-6">
-                                            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-start gap-2">
-                                                <span className="mt-1 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold flex-shrink-0">Q</span>
-                                                {item.question || 'No question'}
-                                            </h3>
-                                            <div className="pl-8">
-                                                <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                                                    {item.metadata?.answer || 'No answer'}
-                                                </p>
+                            {query ? (
+                                // Search Results
+                                results.length > 0 ? (
+                                    results.map((item, idx) => (
+                                        <div key={item.id || idx} className="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition-all duration-200">
+                                            <div className="p-6">
+                                                <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-start gap-2">
+                                                    <span className="mt-1 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold flex-shrink-0">Q</span>
+                                                    {item.question || 'No question'}
+                                                </h3>
+                                                <div className="pl-8">
+                                                    <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                                        {item.metadata?.answer || 'No answer'}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
-                            ) : (
-                                !loadingSearch && query && (
-                                    <div className="text-center py-12">
-                                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                                            <Search className="text-gray-400" size={32} />
+                                    ))
+                                ) : (
+                                    !loadingSearch && (
+                                        <div className="text-center py-12">
+                                            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+                                                <Search className="text-gray-400" size={32} />
+                                            </div>
+                                            <h3 className="text-lg font-medium text-gray-900">No results found</h3>
+                                            <p className="text-gray-500">Try adjusting your search query</p>
                                         </div>
-                                        <h3 className="text-lg font-medium text-gray-900">No results found</h3>
-                                        <p className="text-gray-500">Try adjusting your search query</p>
-                                    </div>
+                                    )
                                 )
-                            )}
-
-                            {!query && results.length === 0 && (
-                                <div className="text-center py-12">
-                                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-50 mb-4">
-                                        <MessageSquare className="text-indigo-400" size={32} />
+                            ) : (
+                                // All Items View
+                                <>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                                            <MessageSquare size={20} />
+                                        </div>
+                                        <h2 className="text-lg font-bold text-gray-800">All Questions</h2>
                                     </div>
-                                    <h3 className="text-lg font-medium text-gray-900">Start Searching</h3>
-                                    <p className="text-gray-500">Type a question above to find answers</p>
-                                </div>
+
+                                    {visibleItems.length > 0 ? (
+                                        visibleItems.map((item, idx) => (
+                                            <div key={item.id || idx} className="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition-all duration-200">
+                                                <div className="p-6">
+                                                    <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-start gap-2">
+                                                        <span className="mt-1 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold flex-shrink-0">Q</span>
+                                                        {item.question || 'No question'}
+                                                    </h3>
+                                                    <div className="pl-8">
+                                                        <p className="text-gray-600 leading-relaxed whitespace-pre-wrap line-clamp-1 group-hover:line-clamp-none transition-all duration-300">
+                                                            {item.metadata?.answer || 'No answer'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        loadingAll ? (
+                                            <div className="text-center py-12">
+                                                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                                                <p className="text-gray-500">Loading questions...</p>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12">
+                                                <p className="text-gray-500">No items found.</p>
+                                            </div>
+                                        )
+                                    )}
+                                    {/* Sentinel for Infinite Scroll */}
+                                    {visibleItems.length < allItems.length && (
+                                        <div ref={observerRef} className="h-4 w-full bg-transparent"></div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
