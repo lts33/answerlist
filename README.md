@@ -17,6 +17,7 @@ A modern, responsive React application designed to manage and query a Question &
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **HTTP Client**: [Axios](https://axios-http.com/)
 - **Authentication**: [@react-oauth/google](https://github.com/MomenSherif/react-oauth)
+- **Backend API**: Generated using [vm-db-api](https://github.com/lts33/vm-db-api)
 
 ## Prerequisites
 
