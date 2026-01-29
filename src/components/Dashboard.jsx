@@ -1,8 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Search, Plus, LogOut, User, MessageSquare, Send } from 'lucide-react';
-
-const API_BASE = 'https://app.lt3.live';
+import { API_BASE } from '../config';
 
 export default function Dashboard({ user, logout }) {
     const [query, setQuery] = useState('');
@@ -32,12 +31,16 @@ export default function Dashboard({ user, logout }) {
                 setResults(Array.isArray(res.data) ? res.data : []);
             } catch (err) {
                 console.error(err);
-                alert('Search failed');
+                if (err.response && err.response.status === 401) {
+                    logout();
+                } else {
+                    alert('Search failed');
+                }
             } finally {
                 setLoadingSearch(false);
             }
         }
-    }, [query, user.token]);
+    }, [query, user.token, logout]);
 
     const fetchItems = useCallback(async (offset = 0) => {
         setLoadingItems(true);
@@ -66,10 +69,13 @@ export default function Dashboard({ user, logout }) {
 
         } catch (err) {
             console.error("Failed to fetch items", err);
+            if (err.response && err.response.status === 401) {
+                logout();
+            }
         } finally {
             setLoadingItems(false);
         }
-    }, [user.token]);
+    }, [user.token, logout]);
 
     const handleAdd = useCallback(async (e) => {
         e.preventDefault();
@@ -90,11 +96,14 @@ export default function Dashboard({ user, logout }) {
             setTimeout(() => setAddMessage(''), 3000);
         } catch (err) {
             console.error(err);
+            if (err.response && err.response.status === 401) {
+                logout();
+            }
             setAddMessage('Failed to add item.');
         } finally {
             setAdding(false);
         }
-    }, [question, answer, user.token, fetchItems]);
+    }, [question, answer, user.token, fetchItems, logout]);
 
     useEffect(() => {
         fetchItems(0);
