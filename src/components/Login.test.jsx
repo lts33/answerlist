@@ -14,7 +14,7 @@ vi.mock('@react-oauth/google', async () => {
     const actual = await vi.importActual('@react-oauth/google');
     return {
         ...actual,
-        GoogleLogin: ({ onSuccess, onError }) => (
+        GoogleLogin: ({ onSuccess }) => (
             <button onClick={() => onSuccess({ credential: 'fake_token' })}>
                 Google Login
             </button>

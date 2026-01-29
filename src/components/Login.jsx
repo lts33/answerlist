@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { GoogleLogin } from '@react-oauth/google';
 import { User, Lock, ShieldCheck } from 'lucide-react';
-
-const API_BASE = 'https://app.lt3.live';
+import { API_BASE } from '../config';
 
 export default function Login({ setUser }) {
     const [error, setError] = useState('');

@@ -97,4 +97,16 @@ describe('Dashboard All Items', () => {
         // Question 21 should not be present yet (total 20 loaded)
         expect(headings.find(h => h.textContent.includes('Question 21'))).toBeUndefined();
     });
+
+    test('logs out user on 401 Unauthorized', async () => {
+        axios.get.mockRejectedValue({
+            response: { status: 401 }
+        });
+
+        render(<Dashboard user={user} logout={logout} />);
+
+        await waitFor(() => {
+            expect(logout).toHaveBeenCalled();
+        });
+    });
 });
