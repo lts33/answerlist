@@ -28,14 +28,16 @@ describe('Dashboard All Items', () => {
     const mockAllItems = Array.from({ length: 25 }, (_, i) => ({
         id: i + 1,
         question: `Question ${i + 1}`,
-        metadata: { answer: `Answer ${i + 1} with some more text to test line clamping.` }
+        answer: `Answer ${i + 1} with some more text to test line clamping.`
     }));
 
     beforeEach(() => {
         vi.clearAllMocks();
-        axios.get.mockImplementation((url) => {
+        axios.get.mockImplementation((url, config) => {
             if (url.includes('/all')) {
-                return Promise.resolve({ data: mockAllItems });
+                const limit = config?.params?.limit || 10;
+                const offset = config?.params?.offset || 0;
+                return Promise.resolve({ data: mockAllItems.slice(offset, offset + limit) });
             }
             if (url.includes('/search')) {
                 return Promise.resolve({ data: [] });
@@ -65,7 +67,7 @@ describe('Dashboard All Items', () => {
         const question10 = headings.find(h => h.textContent.includes('Question 10'));
         expect(question10).toBeDefined();
 
-        // Question 11 should NOT be present in the headings
+        // Question 11 should NOT be present in the headings (since limit is 10)
         const question11 = headings.find(h => h.textContent.includes('Question 11'));
         expect(question11).toBeUndefined();
 
@@ -77,7 +79,8 @@ describe('Dashboard All Items', () => {
         const callback = observerCalls[observerCalls.length - 1][0];
 
         // Trigger the callback with isIntersecting: true
-        act(() => {
+        // In the component, we check for entries[0].isIntersecting && hasMore && !loadingItems
+        await act(async () => {
             callback([{ isIntersecting: true }]);
         });
 
@@ -91,7 +94,7 @@ describe('Dashboard All Items', () => {
         headings = await screen.findAllByRole('heading', { level: 3 });
         expect(headings.find(h => h.textContent.includes('Question 20'))).toBeDefined();
 
-        // Question 21 should not be present yet
+        // Question 21 should not be present yet (total 20 loaded)
         expect(headings.find(h => h.textContent.includes('Question 21'))).toBeUndefined();
     });
 });
