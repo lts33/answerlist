@@ -28,7 +28,10 @@ describe('Dashboard All Items', () => {
     const mockAllItems = Array.from({ length: 25 }, (_, i) => ({
         id: i + 1,
         question: `Question ${i + 1}`,
-        answer: `Answer ${i + 1} with some more text to test line clamping.`
+        metadata: {
+            answer: `Answer ${i + 1} with some more text to test line clamping.`
+        },
+        tags: i % 2 === 0 ? [{ id: i, name: `tag-${i}`, type: 'test' }] : []
     }));
 
     beforeEach(() => {
@@ -66,6 +69,11 @@ describe('Dashboard All Items', () => {
 
         const question10 = headings.find(h => h.textContent.includes('Question 10'));
         expect(question10).toBeDefined();
+
+        // Check for tags on the first item (id=1, index=0, so tags should be present)
+        // actually index 0 is id 1. i=0 -> id=1. 0%2==0 -> tag-0.
+        const tag = await screen.findByText('tag-0');
+        expect(tag).toBeDefined();
 
         // Question 11 should NOT be present in the headings (since limit is 10)
         const question11 = headings.find(h => h.textContent.includes('Question 11'));

@@ -185,8 +185,17 @@ export default function Dashboard({ user, logout }) {
                                                 </h3>
                                                 <div className="pl-8">
                                                     <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                                                        {item.answer || 'No answer'}
+                                                        {item.answer || item.metadata?.answer || 'No answer'}
                                                     </p>
+                                                    {item.tags && item.tags.length > 0 && (
+                                                        <div className="mt-3 flex flex-wrap gap-2">
+                                                            {item.tags.map(tag => (
+                                                                <span key={tag.id} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
+                                                                    {tag.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -222,8 +231,17 @@ export default function Dashboard({ user, logout }) {
                                                     </h3>
                                                     <div className="pl-8">
                                                         <p className="text-gray-600 leading-relaxed whitespace-pre-wrap line-clamp-1 group-hover:line-clamp-none transition-all duration-300">
-                                                            {item.answer || 'No answer'}
+                                                            {item.answer || item.metadata?.answer || 'No answer'}
                                                         </p>
+                                                        {item.tags && item.tags.length > 0 && (
+                                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                                {item.tags.map(tag => (
+                                                                    <span key={tag.id} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
+                                                                        {tag.name}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
