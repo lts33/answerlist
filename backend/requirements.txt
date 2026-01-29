@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+psycopg2-binary
+python-jose[cryptography]
+google-auth
+requests
