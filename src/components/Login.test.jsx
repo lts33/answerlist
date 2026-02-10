@@ -93,4 +93,45 @@ describe('Login Component', () => {
             expect(screen.getByText('Authentication failed: Invalid credentials.')).toBeDefined();
         });
     });
+
+    it('handles registration flow: register_required -> name input -> success', async () => {
+        // First call: register_required
+        axios.post.mockResolvedValueOnce({
+            data: { status: 'register_required' }
+        });
+
+        // Second call: register_success
+        axios.post.mockResolvedValueOnce({
+            data: {
+                status: 'register_success',
+                access_token: 'new_user_token',
+                username: 'New User'
+            }
+        });
+
+        render(<Login setUser={setUser} />);
+
+        // 1. Click Google Login
+        const loginButton = screen.getAllByText('Google Login')[0];
+        fireEvent.click(loginButton);
+
+        // 2. Expect input for display name
+        await waitFor(() => {
+            expect(screen.getByLabelText('Display Name')).toBeDefined();
+        });
+
+        // 3. Enter name
+        fireEvent.change(screen.getByLabelText('Display Name'), { target: { value: 'New User' } });
+
+        // 4. Click Complete Registration
+        fireEvent.click(screen.getByText('Complete Registration'));
+
+        // 5. Expect success
+        await waitFor(() => {
+            expect(setUser).toHaveBeenCalledWith({
+                name: 'New User',
+                token: 'new_user_token'
+            });
+        });
+    });
 });

@@ -14,11 +14,12 @@ export default function Dashboard({ user, logout }) {
     const [adding, setAdding] = useState(false);
     const [addMessage, setAddMessage] = useState('');
 
-    // All Items State
-    const [allItems, setAllItems] = useState([]);
-    const [visibleItems, setVisibleItems] = useState([]);
-    const [loadingAll, setLoadingAll] = useState(false);
+    // Items State
+    const [items, setItems] = useState([]);
+    const [loadingItems, setLoadingItems] = useState(false);
+    const [hasMore, setHasMore] = useState(true);
     const observerRef = useRef(null);
+    const ITEMS_PER_PAGE = 10;
 
     const handleSearch = useCallback(async (e) => {
         if (e.key === 'Enter') {
@@ -38,6 +39,38 @@ export default function Dashboard({ user, logout }) {
         }
     }, [query, user.token]);
 
+    const fetchItems = useCallback(async (offset = 0) => {
+        setLoadingItems(true);
+
+        try {
+            const res = await axios.get(`${API_BASE}/all`, {
+                headers: { Authorization: `Bearer ${user.token}` },
+                params: {
+                    limit: ITEMS_PER_PAGE,
+                    offset: offset
+                }
+            });
+            const data = Array.isArray(res.data) ? res.data : [];
+
+            if (offset === 0) {
+                setItems(data);
+            } else {
+                setItems(prev => [...prev, ...data]);
+            }
+
+            if (data.length < ITEMS_PER_PAGE) {
+                setHasMore(false);
+            } else {
+                setHasMore(true);
+            }
+
+        } catch (err) {
+            console.error("Failed to fetch items", err);
+        } finally {
+            setLoadingItems(false);
+        }
+    }, [user.token]);
+
     const handleAdd = useCallback(async (e) => {
         e.preventDefault();
         setAdding(true);
@@ -52,8 +85,8 @@ export default function Dashboard({ user, logout }) {
             setAddMessage('Item added successfully!');
             setQuestion('');
             setAnswer('');
-            // Refresh all items after adding
-            fetchAllItems();
+            // Refresh items from beginning
+            fetchItems(0);
             setTimeout(() => setAddMessage(''), 3000);
         } catch (err) {
             console.error(err);
@@ -61,47 +94,26 @@ export default function Dashboard({ user, logout }) {
         } finally {
             setAdding(false);
         }
-    }, [question, answer, user.token]);
-
-    const fetchAllItems = useCallback(async () => {
-        setLoadingAll(true);
-        try {
-            const res = await axios.get(`${API_BASE}/all`, {
-                headers: { Authorization: `Bearer ${user.token}` }
-            });
-            const data = Array.isArray(res.data) ? res.data : [];
-            setAllItems(data);
-            setVisibleItems(data.slice(0, 10));
-        } catch (err) {
-            console.error("Failed to fetch all items", err);
-        } finally {
-            setLoadingAll(false);
-        }
-    }, [user.token]);
+    }, [question, answer, user.token, fetchItems]);
 
     useEffect(() => {
-        fetchAllItems();
-    }, [fetchAllItems]);
+        fetchItems(0);
+    }, [fetchItems]);
 
     // Infinite Scroll Observer
     useEffect(() => {
         const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                setVisibleItems((prev) => {
-                    if (prev.length < allItems.length) {
-                        return allItems.slice(0, prev.length + 10);
-                    }
-                    return prev;
-                });
+            if (entries[0].isIntersecting && hasMore && !loadingItems) {
+                fetchItems(items.length);
             }
-        }, { threshold: 1.0 });
+        }, { threshold: 0.1 }); // Reduced threshold for better triggering
 
         if (observerRef.current) {
             observer.observe(observerRef.current);
         }
 
         return () => observer.disconnect();
-    }, [allItems]); // Re-create if allItems changes, relying on setVisibleItems func update for prev
+    }, [hasMore, loadingItems, items.length, fetchItems, query]);
 
     // Robust display name
     const displayName = typeof user.name === 'string' ? user.name : 'User';
@@ -173,8 +185,17 @@ export default function Dashboard({ user, logout }) {
                                                 </h3>
                                                 <div className="pl-8">
                                                     <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">
-                                                        {item.metadata?.answer || 'No answer'}
+                                                        {item.answer || item.metadata?.answer || 'No answer'}
                                                     </p>
+                                                    {item.tags && item.tags.length > 0 && (
+                                                        <div className="mt-3 flex flex-wrap gap-2">
+                                                            {item.tags.map(tag => (
+                                                                <span key={tag.id} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
+                                                                    {tag.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -200,8 +221,8 @@ export default function Dashboard({ user, logout }) {
                                         <h2 className="text-lg font-bold text-gray-800">All Questions</h2>
                                     </div>
 
-                                    {visibleItems.length > 0 ? (
-                                        visibleItems.map((item, idx) => (
+                                    {items.length > 0 ? (
+                                        items.map((item, idx) => (
                                             <div key={item.id || idx} className="group bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden transition-all duration-200">
                                                 <div className="p-6">
                                                     <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-start gap-2">
@@ -210,14 +231,23 @@ export default function Dashboard({ user, logout }) {
                                                     </h3>
                                                     <div className="pl-8">
                                                         <p className="text-gray-600 leading-relaxed whitespace-pre-wrap line-clamp-1 group-hover:line-clamp-none transition-all duration-300">
-                                                            {item.metadata?.answer || 'No answer'}
+                                                            {item.answer || item.metadata?.answer || 'No answer'}
                                                         </p>
+                                                        {item.tags && item.tags.length > 0 && (
+                                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                                {item.tags.map(tag => (
+                                                                    <span key={tag.id} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-md">
+                                                                        {tag.name}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
                                         ))
                                     ) : (
-                                        loadingAll ? (
+                                        loadingItems ? (
                                             <div className="text-center py-12">
                                                 <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                                                 <p className="text-gray-500">Loading questions...</p>
@@ -229,8 +259,12 @@ export default function Dashboard({ user, logout }) {
                                         )
                                     )}
                                     {/* Sentinel for Infinite Scroll */}
-                                    {visibleItems.length < allItems.length && (
-                                        <div ref={observerRef} className="h-4 w-full bg-transparent"></div>
+                                    {hasMore && (
+                                        <div ref={observerRef} className="h-4 w-full flex justify-center p-4">
+                                             {loadingItems && items.length > 0 && (
+                                                 <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                                             )}
+                                        </div>
                                     )}
                                 </>
                             )}

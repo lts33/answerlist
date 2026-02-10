@@ -63,7 +63,7 @@ export default function Login({ setUser }) {
 
             const res = await axios.post(`${API_BASE}/auth/google`, payload);
 
-            if (res.data && res.data.status === 'login_success') {
+            if (res.data && (res.data.status === 'login_success' || res.data.status === 'register_success')) {
                 handleLoginSuccess(res.data);
             } else {
                  setError('Registration failed.');
