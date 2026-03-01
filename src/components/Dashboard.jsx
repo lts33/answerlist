@@ -22,10 +22,11 @@ export default function Dashboard({ user, logout }) {
 
     const handleSearch = useCallback(async (e) => {
         if (e.key === 'Enter') {
-            if (!query.trim()) return;
+            const currentQuery = e.target.value;
+            if (!currentQuery.trim()) return;
             setLoadingSearch(true);
             try {
-                const res = await axios.get(`${API_BASE}/search?q=${encodeURIComponent(query)}`, {
+                const res = await axios.get(`${API_BASE}/search?q=${encodeURIComponent(currentQuery)}`, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 });
                 setResults(Array.isArray(res.data) ? res.data : []);
@@ -36,7 +37,23 @@ export default function Dashboard({ user, logout }) {
                 setLoadingSearch(false);
             }
         }
-    }, [query, user.token]);
+    }, [user.token]);
+
+    const fetchAllItems = useCallback(async () => {
+        setLoadingAll(true);
+        try {
+            const res = await axios.get(`${API_BASE}/all`, {
+                headers: { Authorization: `Bearer ${user.token}` }
+            });
+            const data = Array.isArray(res.data) ? res.data : [];
+            setAllItems(data);
+            setVisibleItems(data.slice(0, 10));
+        } catch (err) {
+            console.error("Failed to fetch all items", err);
+        } finally {
+            setLoadingAll(false);
+        }
+    }, [user.token]);
 
     const handleAdd = useCallback(async (e) => {
         e.preventDefault();
@@ -61,23 +78,7 @@ export default function Dashboard({ user, logout }) {
         } finally {
             setAdding(false);
         }
-    }, [question, answer, user.token]);
-
-    const fetchAllItems = useCallback(async () => {
-        setLoadingAll(true);
-        try {
-            const res = await axios.get(`${API_BASE}/all`, {
-                headers: { Authorization: `Bearer ${user.token}` }
-            });
-            const data = Array.isArray(res.data) ? res.data : [];
-            setAllItems(data);
-            setVisibleItems(data.slice(0, 10));
-        } catch (err) {
-            console.error("Failed to fetch all items", err);
-        } finally {
-            setLoadingAll(false);
-        }
-    }, [user.token]);
+    }, [question, answer, user.token, fetchAllItems]);
 
     useEffect(() => {
         fetchAllItems();

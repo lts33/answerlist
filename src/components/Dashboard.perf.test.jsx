@@ -59,13 +59,13 @@ describe('Dashboard Performance', () => {
         const searchUpdateOnSubmit = searchUpdateFormProps.onSubmit;
 
         // Verify Step 1:
-        // handleSearch changed (expected, depends on query)
-        expect(initialOnKeyDown).not.toBe(searchUpdateOnKeyDown);
+        // handleSearch STABLE (Optimization Success!)
+        expect(initialOnKeyDown).toBe(searchUpdateOnKeyDown);
         // handleAdd STABLE (Optimization Success!)
         expect(initialOnSubmit).toBe(searchUpdateOnSubmit);
 
         console.log('--- Check: Updating Search Input ---');
-        console.log('handleSearch changed:', initialOnKeyDown !== searchUpdateOnKeyDown, '(Expected: true)');
+        console.log('handleSearch changed:', initialOnKeyDown !== searchUpdateOnKeyDown, '(Expected: false)');
         console.log('handleAdd changed:', initialOnSubmit !== searchUpdateOnSubmit, '(Expected: false)');
 
         // 2. Type in Add Question Input -> Updates `question` state
